@@ -1,4 +1,5 @@
 import { INITIAL_DATA } from './data.js';
+import { supabase } from './supabase.js';
 
 // --- ESTADO GLOBAL ---
 let state = {
@@ -12,83 +13,192 @@ let state = {
 // Chave do localStorage
 const STORAGE_KEY = 'FINANCAS_PRO_DATA';
 
+// Variável para armazenar a sessão do usuário no Supabase
+let currentUser = null;
+
 // --- INICIALIZAÇÃO ---
-function init() {
-  setupLogin();
+async function init() {
+  try {
+    console.log('[Init] Iniciando app...');
+    console.log('[Init] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('[Init] Supabase Key (primeiros 20 chars):', import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 20) + '...');
+    
+    setupEventListeners();
+    setupLogin();
 
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      state = JSON.parse(stored);
-      // Garantir que todas as transações antigas possuam budgetMonth
-      migrateData();
-    } catch (e) {
-      console.error("Erro ao carregar dados salvos. Restaurando padrão.", e);
-      loadDefaultData();
+    // Verificar se já existe uma sessão ativa no Supabase
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log('[Init] getSession resultado:', { session: !!session, error });
+    
+    if (error) {
+      console.error('[Init] Erro ao buscar sessão:', error);
     }
-  } else {
-    loadDefaultData();
-  }
+    
+    if (session) {
+      currentUser = session.user;
+      await loadUserDataFromSupabase();
+      showApp();
+    } else {
+      showLogin();
+    }
 
-  setupEventListeners();
-  populateMonthSelector();
-  render();
+    // Listener para mudanças de autenticação
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] onAuthStateChange:', event, !!session);
+      if (event === 'SIGNED_IN' && session) {
+        currentUser = session.user;
+        await loadUserDataFromSupabase();
+        showApp();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        showLogin();
+      }
+    });
+    
+    console.log('[Init] App inicializado com sucesso.');
+  } catch (err) {
+    console.error('[Init] ERRO FATAL na inicialização:', err);
+    alert('Erro ao inicializar o app: ' + err.message);
+  }
+}
+
+function showApp() {
+  const loginOverlay = document.getElementById('loginOverlay');
+  const appContainer = document.getElementById('appContainer');
+  loginOverlay.style.opacity = '0';
+  setTimeout(() => {
+    loginOverlay.style.display = 'none';
+    appContainer.style.display = 'block';
+    populateMonthSelector();
+    render();
+    renderAnalytics();
+  }, 500);
+}
+
+function showLogin() {
+  const loginOverlay = document.getElementById('loginOverlay');
+  const appContainer = document.getElementById('appContainer');
+  
+  // Reseta estado da tela de login
+  document.getElementById('loginTitle').textContent = "Entrar no Finanças Pro";
+  document.getElementById('loginSubtitle').textContent = "Acesse sua planilha inteligente online";
+  document.getElementById('loginPassword').value = '';
+  
+  loginOverlay.style.display = 'flex';
+  loginOverlay.style.opacity = '1';
+  appContainer.style.display = 'none';
 }
 
 function setupLogin() {
-  const loginOverlay = document.getElementById('loginOverlay');
-  const appContainer = document.getElementById('appContainer');
   const loginForm = document.getElementById('loginForm');
-  const loginTitle = document.getElementById('loginTitle');
-  const loginSubtitle = document.getElementById('loginSubtitle');
-  const lblLoginPassword = document.getElementById('lblLoginPassword');
-  
-  const savedPass = localStorage.getItem('FINANCAS_PRO_PASS');
-  const loggedIn = sessionStorage.getItem('FINANCAS_LOGGED_IN');
-
-  if (loggedIn) {
-    loginOverlay.style.display = 'none';
-    appContainer.style.display = 'block';
-  } else {
-    loginOverlay.style.display = 'flex';
-    appContainer.style.display = 'none';
-    
-    if (!savedPass) {
-      loginTitle.textContent = "Crie sua Senha";
-      loginSubtitle.textContent = "Primeiro acesso: defina a senha para sua planilha";
-      lblLoginPassword.textContent = "Crie uma Senha";
-    }
-  }
+  const btnSignIn = document.getElementById('btnSignIn');
+  const btnSignUp = document.getElementById('btnSignUp');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
 
   loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const inputPass = document.getElementById('loginPassword').value;
-    
-    if (!savedPass) {
-      localStorage.setItem('FINANCAS_PRO_PASS', inputPass);
-      sessionStorage.setItem('FINANCAS_LOGGED_IN', 'true');
-      loginOverlay.style.opacity = '0';
-      setTimeout(() => {
-        loginOverlay.style.display = 'none';
-        appContainer.style.display = 'block';
-        renderAnalytics();
-      }, 500);
-      showToast("Senha cadastrada com sucesso!", "success");
-    } else {
-      if (inputPass === savedPass) {
-        sessionStorage.setItem('FINANCAS_LOGGED_IN', 'true');
-        loginOverlay.style.opacity = '0';
-        setTimeout(() => {
-          loginOverlay.style.display = 'none';
-          appContainer.style.display = 'block';
-          renderAnalytics();
-        }, 500);
+    btnSignIn.click();
+  });
+
+  btnSignIn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!loginEmail.value || !loginPassword.value) {
+      showToast("Preencha email e senha", "error");
+      return;
+    }
+    btnSignIn.disabled = true;
+    btnSignIn.textContent = 'Entrando...';
+    try {
+      console.log('[Auth] Tentando login com:', loginEmail.value);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.value,
+        password: loginPassword.value,
+      });
+      if (error) {
+        console.error('[Auth] Erro no login:', error);
+        showToast("Erro ao entrar: " + error.message, "error");
       } else {
-        showToast("Senha incorreta. Tente novamente.", "error");
-        document.getElementById('loginPassword').value = '';
+        console.log('[Auth] Login OK:', data);
+        showToast("Login realizado com sucesso!", "success");
       }
+    } catch (err) {
+      console.error('[Auth] Exceção no login:', err);
+      showToast("Erro inesperado: " + err.message, "error");
+    } finally {
+      btnSignIn.disabled = false;
+      btnSignIn.textContent = 'Entrar';
     }
   });
+
+  btnSignUp.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!loginEmail.value || !loginPassword.value) {
+      showToast("Preencha email e senha", "error");
+      return;
+    }
+    if (loginPassword.value.length < 6) {
+      showToast("A senha deve ter no mínimo 6 caracteres.", "error");
+      return;
+    }
+    btnSignUp.disabled = true;
+    btnSignUp.textContent = 'Criando...';
+    try {
+      console.log('[Auth] Tentando criar conta para:', loginEmail.value);
+      const { data, error } = await supabase.auth.signUp({
+        email: loginEmail.value,
+        password: loginPassword.value,
+      });
+      console.log('[Auth] Resultado signUp - data:', data, 'error:', error);
+      if (error) {
+        console.error('[Auth] Erro ao criar conta:', error);
+        showToast("Erro ao criar conta: " + error.message, "error");
+      } else if (data.user && !data.session) {
+        // Email confirmation está habilitado no Supabase
+        showToast("Conta criada! Verifique seu e-mail para confirmar antes de entrar.", "info");
+      } else if (data.session) {
+        // Login automático após criação (email confirmation desabilitado)
+        showToast("Conta criada com sucesso! Entrando...", "success");
+      } else {
+        showToast("Conta criada! Tente fazer login.", "success");
+      }
+    } catch (err) {
+      console.error('[Auth] Exceção ao criar conta:', err);
+      showToast("Erro inesperado: " + err.message, "error");
+    } finally {
+      btnSignUp.disabled = false;
+      btnSignUp.textContent = 'Criar Conta';
+    }
+  });
+  
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      showToast("Você saiu da conta.", "info");
+    });
+  }
+}
+
+async function loadUserDataFromSupabase() {
+  if (!currentUser) return;
+  const { data, error } = await supabase
+    .from('user_data')
+    .select('data')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 é "no rows returned"
+    console.error("Erro ao buscar dados do Supabase:", error);
+    showToast("Erro de conexão com o banco.", "error");
+    loadDefaultData();
+  } else if (data && data.data) {
+    state = data.data;
+    migrateData();
+  } else {
+    // Primeiro acesso deste usuário
+    loadDefaultData();
+  }
 }
 
 function loadDefaultData() {
@@ -116,8 +226,21 @@ function migrateData() {
   if (updated) saveToStorage();
 }
 
-function saveToStorage() {
+async function saveToStorage() {
+  // Salva localmente como backup ou cache
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  
+  // Salva no Supabase
+  if (currentUser) {
+    const { error } = await supabase
+      .from('user_data')
+      .upsert({ id: currentUser.id, data: state });
+      
+    if (error) {
+      console.error("Erro ao salvar no Supabase:", error);
+      showToast("Falha ao salvar na nuvem.", "error");
+    }
+  }
 }
 
 // --- SELETOR DE MESES ---

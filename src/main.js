@@ -182,6 +182,19 @@ function setupLogin() {
 
 async function loadUserDataFromSupabase() {
   if (!currentUser) return;
+
+  // 1. Tentar carregar os dados locais primeiro para comparação
+  let localState = null;
+  const localDataStr = localStorage.getItem(STORAGE_KEY);
+  if (localDataStr) {
+    try {
+      localState = JSON.parse(localDataStr);
+    } catch (e) {
+      console.error("Erro ao ler dados locais:", e);
+    }
+  }
+
+  // 2. Buscar os dados no Supabase
   const { data, error } = await supabase
     .from('user_data')
     .select('data')
@@ -190,13 +203,46 @@ async function loadUserDataFromSupabase() {
 
   if (error && error.code !== 'PGRST116') { // PGRST116 é "no rows returned"
     console.error("Erro ao buscar dados do Supabase:", error);
-    showToast("Erro de conexão com o banco.", "error");
-    loadDefaultData();
-  } else if (data && data.data) {
-    state = data.data;
+    showToast("Erro de conexão com o banco. Usando dados locais.", "error");
+    if (localState) {
+      state = localState;
+      migrateData();
+    } else {
+      loadDefaultData();
+    }
+    return;
+  }
+
+  const remoteState = data?.data;
+
+  // 3. Regra de sincronização offline-first baseada em timestamps
+  if (remoteState && localState) {
+    const remoteTime = new Date(remoteState.lastUpdated || 0).getTime();
+    const localTime = new Date(localState.lastUpdated || 0).getTime();
+
+    if (localTime > remoteTime) {
+      console.log('[Sync] Dados locais mais recentes. Sincronizando com a nuvem...');
+      state = localState;
+      migrateData();
+      await saveToStorage(); // Faz upload automático dos dados locais mais novos
+    } else {
+      console.log('[Sync] Dados da nuvem mais recentes. Atualizando local...');
+      state = remoteState;
+      migrateData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  } else if (remoteState) {
+    console.log('[Sync] Baixando dados da nuvem...');
+    state = remoteState;
     migrateData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } else if (localState) {
+    console.log('[Sync] Primeiro acesso com dados locais. Enviando para a nuvem...');
+    state = localState;
+    migrateData();
+    await saveToStorage(); // Envia os dados locais existentes para o novo usuário no Supabase
   } else {
-    // Primeiro acesso deste usuário
+    console.log('[Sync] Primeiro acesso sem dados. Carregando dados de exemplo...');
     loadDefaultData();
   }
 }
@@ -227,6 +273,9 @@ function migrateData() {
 }
 
 async function saveToStorage() {
+  // Atualiza o timestamp de modificação antes de salvar
+  state.lastUpdated = new Date().toISOString();
+
   // Salva localmente como backup ou cache
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   
@@ -394,7 +443,7 @@ function renderIncomesTable(incomes, total) {
       <td class="text-bold">${escapeHtml(inc.description)}</td>
       <td class="font-numeric text-bold text-success">${formatCurrency(inc.value)}</td>
       <td class="font-numeric">${formatDate(inc.date)}</td>
-      <td>
+      <td class="col-obs">
         <span class="badge ${badgeClass}" data-id="${inc.id}" data-action="toggle-status">
           ${inc.status}
         </span>
@@ -504,7 +553,7 @@ function renderExpensesTable(expenses, total) {
             ${escapeHtml(exp.status)}
           </span>
         </td>
-        <td>
+        <td class="col-obs">
           ${exp.obs ? `<span class="obs-note" title="${escapeHtml(exp.obs)}">${escapeHtml(exp.obs)}</span>` : '-'}
         </td>
         <td class="text-right">
@@ -1085,11 +1134,12 @@ function parseSheetNameToBudgetMonth(sheetName) {
   }
 
   // 3. Procurar ano (4 dígitos como 2026 ou 2 dígitos como 26)
-  const match4 = name.match(/\b(20\d{2})\b/);
+  const match4 = name.match(/(20\d{2})/);
   if (match4) {
     year = match4[1];
   } else {
-    const match2 = name.match(/\b(\d{2})\b/);
+    // Procura por 2 dígitos precedidos por separador (/, -, _, ., espaço) ou no fim do texto
+    const match2 = name.match(/[\/\s_.-](\d{2})\b/) || name.match(/(\d{2})$/);
     if (match2 && match2[1] !== month) {
       year = '20' + match2[1];
     } else {
@@ -1121,12 +1171,6 @@ function importSpreadsheetData(e) {
         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
         const budgetMonth = parseSheetNameToBudgetMonth(sheetName);
-        // Filter to keep only years 2025 and 2026
-        const yearPart = budgetMonth.split('/')[1];
-        if (yearPart !== '2025' && yearPart !== '2026') {
-          // Skip this sheet
-          return;
-        }
         const result = parseSpreadsheet2DArray(rows, budgetMonth);
         
         // Ignora abas que não contêm transações válidas (como dashboards ou abas vazias)
@@ -1405,17 +1449,14 @@ function populateAnalyticsSelectors() {
   const startSel = document.getElementById('analyticsRangeStart');
   const endSel = document.getElementById('analyticsRangeEnd');
 
-  const months = new Set();
   state.incomes.forEach(item => {
     if (item.budgetMonth) {
-      const y = item.budgetMonth.split('/')[1];
-      if (y === '2025' || y === '2026') months.add(item.budgetMonth);
+      months.add(item.budgetMonth);
     }
   });
   state.expenses.forEach(item => {
     if (item.budgetMonth) {
-      const y = item.budgetMonth.split('/')[1];
-      if (y === '2025' || y === '2026') months.add(item.budgetMonth);
+      months.add(item.budgetMonth);
     }
   });
   if (months.size === 0) months.add('05/2026');
@@ -1465,10 +1506,7 @@ function getAnalyticsMonthRange() {
   state.incomes.forEach(i => { if (i.budgetMonth) allMonths.add(i.budgetMonth); });
   state.expenses.forEach(e => { if (e.budgetMonth) allMonths.add(e.budgetMonth); });
 
-  const sorted = Array.from(allMonths).filter(m => {
-    const y = m.split('/')[1];
-    return y === '2025' || y === '2026';
-  }).sort((a, b) => {
+  const sorted = Array.from(allMonths).sort((a, b) => {
     const [mA, yA] = a.split('/').map(Number);
     const [mB, yB] = b.split('/').map(Number);
     return yA !== yB ? yA - yB : mA - mB;

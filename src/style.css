@@ -93,9 +93,12 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-muted);
+  overflow: hidden;
 }
 
 .brand-section h1 {
@@ -670,7 +673,7 @@ tr.table-row-hover:hover {
   border-radius: 10px;
   font-weight: 600;
   font-size: 0.9rem;
-  z-index: 1100;
+  z-index: 10000;
   transform: translateY(100px);
   opacity: 0;
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
@@ -976,3 +979,363 @@ tr:hover .actions-cell {
   0% { opacity: 0; transform: translateY(30px); }
   100% { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================================
+   RESPONSIVE DESIGN — Mobile First
+   Breakpoints:
+   - xs: < 480px  (smartphones pequenos)
+   - sm: 480–767px (smartphones grandes)
+   - md: 768–1099px (tablets)
+   - lg: ≥ 1100px (desktops) — padrão acima
+   ============================================================ */
+
+/* ── TABLET (≤ 1024px) ─────────────────────────────────── */
+@media (max-width: 1024px) {
+  .app-container {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── TABLET MENOR / SMARTPHONE GRANDE (≤ 768px) ────────── */
+@media (max-width: 768px) {
+  /* App container */
+  .app-container {
+    padding: 1rem;
+  }
+
+  /* Header: empilha brand e controles */
+  header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+
+  .brand-section {
+    min-width: 0;
+  }
+
+  .header-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Nav tabs ocupa largura total */
+  .nav-tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .nav-tab {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.25rem;
+    min-width: 0;
+  }
+
+  /* Linha do seletor de mês + botão novo mês */
+  .header-controls > div:last-child {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  select.month-selector {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Brand */
+  .brand-section h1 {
+    font-size: 1.4rem;
+  }
+
+  /* Métricas: 1 coluna */
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .metric-value {
+    font-size: 1.6rem;
+  }
+
+  /* Dashboard grid: 1 coluna */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  /* Cards */
+  .card-panel {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .widget-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Section header */
+  .section-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  /* Tabelas: scroll horizontal */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+
+  table {
+    font-size: 0.8rem;
+    min-width: 480px;
+  }
+
+  th, td {
+    padding: 0.6rem 0.75rem;
+  }
+
+  /* Oculta coluna Obs em mobile */
+  .col-obs {
+    display: none;
+  }
+
+  /* Botões de ação: sempre visíveis em mobile (sem hover) */
+  .actions-cell {
+    opacity: 1;
+  }
+
+  /* Modal: quase full screen */
+  .modal-content {
+    max-width: 95vw;
+    padding: 1.25rem;
+    margin: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Toast: full width no mobile */
+  .toast {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+
+  /* Analytics */
+  .analytics-filter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .filter-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .filter-group select {
+    flex: 1;
+    margin-left: 0.5rem;
+  }
+
+  #btnApplyAnalytics {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .analytics-kpi {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .analytics-kpi-value {
+    font-size: 1.1rem;
+  }
+
+  .analytics-charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .chart-full-width {
+    grid-column: 1;
+  }
+
+  /* Login card */
+  .login-card {
+    padding: 1.75rem 1.25rem;
+    margin: 1rem;
+  }
+}
+
+/* ── SMARTPHONE PEQUENO (≤ 480px) ──────────────────────── */
+@media (max-width: 480px) {
+  /* App container */
+  .app-container {
+    padding: 0.75rem;
+  }
+
+  /* Brand mais compacto */
+  .brand-section h1 {
+    font-size: 1.2rem;
+  }
+
+  .brand-section p {
+    font-size: 0.78rem;
+  }
+
+  /* Métricas ainda mais compactas */
+  .metric-card {
+    padding: 1rem;
+  }
+
+  .metric-value {
+    font-size: 1.4rem;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+  }
+
+  /* Tabela mais enxuta */
+  table {
+    font-size: 0.75rem;
+    min-width: 380px;
+  }
+
+  th, td {
+    padding: 0.5rem 0.6rem;
+  }
+
+  /* KPI analytics: 1 coluna */
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-kpi-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+
+  /* Nav tab: sem texto em telas minúsculas */
+  .nav-tab span.tab-label {
+    display: none;
+  }
+
+  /* Seção header: botão pequeno */
+  .btn.btn-primary.btn-small {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  /* Login */
+  .login-card {
+    padding: 1.25rem 1rem;
+    margin: 0.75rem;
+  }
+
+  .login-header h2 {
+    font-size: 1.25rem;
+  }
+
+  /* Toast: font menor */
+  .toast {
+    font-size: 0.82rem;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Botões login lado a lado adaptados */
+  #btnSignIn, #btnSignUp {
+    font-size: 0.9rem;
+    padding: 0.7rem 0.5rem !important;
+  }
+}
+
+/* ── AJUSTE FINO PARA TELAS MUITO LARGAS (> 1400px) ───── */
+@media (min-width: 1400px) {
+  .app-container {
+    padding: 2rem 2.5rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── TOUCH DEVICES: remove hover effects desnecessários ─── */
+@media (hover: none) {
+  .metric-card:hover {
+    transform: none;
+  }
+
+  .analytics-kpi:hover {
+    transform: none;
+  }
+
+  .chart-card:hover {
+    transform: none;
+  }
+
+  .badge:hover {
+    transform: none;
+  }
+
+  .btn-primary:hover {
+    transform: none;
+  }
+
+  /* Ações sempre visíveis em touch */
+  .actions-cell {
+    opacity: 1;
+  }
+}
+

@@ -96,7 +96,7 @@ header {
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-muted);
   overflow: hidden;
 }
@@ -231,9 +231,14 @@ select.month-selector:focus {
 /* Main Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 2.2fr 1fr;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
   gap: 2rem;
   align-items: start;
+}
+
+.main-content,
+.sidebar {
+  min-width: 0;
 }
 
 @media (max-width: 1100px) {
@@ -327,8 +332,11 @@ select.month-selector:focus {
 
 /* Tables Styling */
 .table-responsive {
-  overflow-x: auto;
+  display: block;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -336,6 +344,14 @@ table {
   border-collapse: collapse;
   text-align: left;
   font-size: 0.9rem;
+}
+
+#tableExpenses {
+  min-width: 750px;
+}
+
+#tableIncomes {
+  min-width: 600px;
 }
 
 th {
@@ -389,6 +405,7 @@ tr.table-row-hover:hover {
   user-select: none;
   transition: var(--transition-fast);
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 .badge:hover {
   transform: scale(1.05);
@@ -457,7 +474,7 @@ tr.table-row-hover:hover {
 .text-dim { color: var(--text-dim); }
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
-.font-numeric { font-feature-settings: "tnum"; }
+.font-numeric { font-feature-settings: "tnum"; white-space: nowrap; }
 
 .obs-note {
   font-size: 0.75rem;
@@ -709,6 +726,11 @@ tr.table-row-hover:hover {
   justify-content: flex-end;
   opacity: 0.3;
   transition: var(--transition-fast);
+  flex-wrap: nowrap;
+}
+
+td.text-right {
+  white-space: nowrap;
 }
 
 tr:hover .actions-cell {
@@ -1009,7 +1031,7 @@ tr:hover .actions-cell {
 @media (max-width: 768px) {
   /* App container */
   .app-container {
-    padding: 1rem;
+    padding: 1rem 0.5rem;
   }
 
   /* Header: empilha brand e controles */
@@ -1018,7 +1040,7 @@ tr:hover .actions-cell {
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
-    padding-bottom: 1rem;
+    padding: 1rem 0.75rem;
     margin-bottom: 1.25rem;
     overflow: hidden;
   }
@@ -1088,12 +1110,12 @@ tr:hover .actions-cell {
 
   /* Cards */
   .card-panel {
-    padding: 1rem;
-    margin-bottom: 1.25rem;
+    padding: 1rem 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .widget-card {
-    padding: 1rem;
+    padding: 1rem 0.75rem;
     margin-bottom: 1rem;
   }
 
@@ -1116,7 +1138,6 @@ tr:hover .actions-cell {
 
   table {
     font-size: 0.8rem;
-    min-width: 480px;
   }
 
   th, td {
@@ -1219,8 +1240,9 @@ tr:hover .actions-cell {
 /* ── SMARTPHONE PEQUENO (≤ 480px) ──────────────────────── */
 @media (max-width: 480px) {
   /* App container */
+  /* App container */
   .app-container {
-    padding: 0.75rem;
+    padding: 0.5rem 0.25rem;
   }
 
   /* Brand mais compacto */
@@ -1234,7 +1256,7 @@ tr:hover .actions-cell {
 
   /* Métricas ainda mais compactas */
   .metric-card {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .metric-value {
@@ -1245,10 +1267,21 @@ tr:hover .actions-cell {
     font-size: 0.75rem;
   }
 
+  .card-panel {
+    padding: 0.75rem 0.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
+  }
+
+  .widget-card {
+    padding: 0.75rem 0.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
+  }
+
   /* Tabela mais enxuta */
   table {
     font-size: 0.75rem;
-    min-width: 380px;
   }
 
   th, td {

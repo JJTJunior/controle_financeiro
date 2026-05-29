@@ -51,7 +51,7 @@ ${b}`}class x extends Error{constructor({message:e,code:r,cause:s,name:n}){var i
       <td class="text-bold">${X(n.description)}</td>
       <td class="font-numeric text-bold text-success">${C(n.value)}</td>
       <td class="font-numeric">${Ur(n.date)}</td>
-      <td>
+      <td class="col-obs">
         <span class="badge ${a}" data-id="${n.id}" data-action="toggle-status">
           ${n.status}
         </span>
@@ -97,7 +97,7 @@ ${b}`}class x extends Error{constructor({message:e,code:r,cause:s,name:n}){var i
             ${X(c.status)}
           </span>
         </td>
-        <td>
+        <td class="col-obs">
           ${c.obs?`<span class="obs-note" title="${X(c.obs)}">${X(c.obs)}</span>`:"-"}
         </td>
         <td class="text-right">

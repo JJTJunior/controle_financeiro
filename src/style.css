@@ -42,11 +42,19 @@
   padding: 0;
 }
 
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-main);
   color: var(--text-main);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   line-height: 1.5;
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
@@ -84,8 +92,10 @@ body {
 /* App Container Layout */
 .app-container {
   max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  overflow-x: hidden;
 }
 
 /* Header styling */
@@ -337,6 +347,8 @@ select.month-selector:focus {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* Evita que a tabela estoure o container pai */
+  contain: inline-size;
 }
 
 table {
@@ -347,11 +359,11 @@ table {
 }
 
 #tableExpenses {
-  min-width: 750px;
+  min-width: 680px;
 }
 
 #tableIncomes {
-  min-width: 600px;
+  min-width: 520px;
 }
 
 th {
@@ -969,7 +981,7 @@ tr:hover .actions-cell {
 }
 
 .login-card {
-  width: 100%;
+  width: calc(100% - 2rem);
   max-width: 420px;
   padding: 2.5rem;
   box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 40px rgba(99, 102, 241, 0.1);
@@ -1031,7 +1043,9 @@ tr:hover .actions-cell {
 @media (max-width: 768px) {
   /* App container */
   .app-container {
-    padding: 1rem 0.5rem;
+    padding: 1rem 0.75rem;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* Header: empilha brand e controles */
@@ -1043,10 +1057,13 @@ tr:hover .actions-cell {
     padding: 1rem 0.75rem;
     margin-bottom: 1.25rem;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 
   .brand-section {
     min-width: 0;
+    width: 100%;
   }
 
   .header-controls {
@@ -1056,6 +1073,7 @@ tr:hover .actions-cell {
     align-items: stretch;
     width: 100%;
     min-width: 0;
+    max-width: 100%;
   }
 
   /* Nav tabs ocupa largura total */
@@ -1078,6 +1096,7 @@ tr:hover .actions-cell {
     align-items: center;
     gap: 0.5rem;
     width: 100%;
+    max-width: 100%;
   }
 
   select.month-selector {
@@ -1240,9 +1259,10 @@ tr:hover .actions-cell {
 /* ── SMARTPHONE PEQUENO (≤ 480px) ──────────────────────── */
 @media (max-width: 480px) {
   /* App container */
-  /* App container */
   .app-container {
-    padding: 0.5rem 0.25rem;
+    padding: 0.5rem 0.5rem;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* Brand mais compacto */
@@ -1313,11 +1333,12 @@ tr:hover .actions-cell {
   /* Login */
   .login-card {
     padding: 1.25rem 1rem;
-    margin: 0.75rem;
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
   }
 
   .login-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
   }
 
   /* Toast: font menor */
@@ -1326,10 +1347,15 @@ tr:hover .actions-cell {
     padding: 0.75rem 1rem;
   }
 
-  /* Botões login lado a lado adaptados */
+  /* Botões login empilhados em telas muito pequenas */
+  #loginForm > div {
+    flex-direction: column !important;
+  }
+
   #btnSignIn, #btnSignUp {
     font-size: 0.9rem;
-    padding: 0.7rem 0.5rem !important;
+    padding: 0.75rem 0.5rem !important;
+    width: 100%;
   }
 }
 

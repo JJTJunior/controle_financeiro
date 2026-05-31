@@ -80,6 +80,16 @@
             <span class="tab-label">Analytics</span>
           </button>
         </nav>
+        
+        <div id="userPill" class="user-pill" title="Conta conectada">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span id="headerUserEmail"></span>
+        </div>
+
         <div style="display: flex; gap: 0.5rem; align-items: center;">
           <select id="monthSelector" class="month-selector">
             <!-- Será preenchido dinamicamente via JS -->
@@ -309,6 +319,10 @@
               <button class="btn btn-danger btn-small" id="btnResetData"
                 style="width: 100%; justify-content: center; margin-top: 0.5rem;">
                 Redefinir Dados Planilha
+              </button>
+              <button class="btn btn-danger btn-small" id="btnClearData"
+                style="width: 100%; justify-content: center; margin-top: 0.5rem; background: rgba(244, 63, 94, 0.15); color: var(--danger); border-color: rgba(244, 63, 94, 0.2);">
+                Limpar Todos os Dados
               </button>
               <button class="btn btn-secondary" id="btnLogout"
                 style="width: 100%; justify-content: center; margin-top: 1rem; border-color: var(--danger); color: var(--danger);">

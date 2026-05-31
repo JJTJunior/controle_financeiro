@@ -133,6 +133,35 @@ header {
   align-items: center;
 }
 
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-card);
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-muted);
+  font-size: 0.85rem;
+  color: var(--text-main);
+  transition: var(--transition-fast);
+  cursor: default;
+}
+.user-pill:hover {
+  border-color: var(--primary);
+  background: var(--bg-surface-hover);
+}
+.user-pill svg {
+  color: var(--primary);
+}
+@media (max-width: 600px) {
+  .user-pill span {
+    display: none;
+  }
+  .user-pill {
+    padding: 0.5rem;
+  }
+}
+
 select.month-selector {
   background: var(--bg-card);
   border: 1px solid var(--border-muted);

@@ -10,8 +10,10 @@ let state = {
   customExpenseStatuses: []
 };
 
-// Chave do localStorage
-const STORAGE_KEY = 'FINANCAS_PRO_DATA';
+// Chave do localStorage dinâmica por usuário logado
+function getStorageKey() {
+  return currentUser ? `FINANCAS_PRO_DATA_${currentUser.id}` : 'FINANCAS_PRO_DATA';
+}
 
 // Variável para armazenar a sessão do usuário no Supabase
 let currentUser = null;
@@ -65,6 +67,13 @@ async function init() {
 function showApp() {
   const loginOverlay = document.getElementById('loginOverlay');
   const appContainer = document.getElementById('appContainer');
+  
+  // Exibir e-mail do usuário no Header
+  const headerUserEmail = document.getElementById('headerUserEmail');
+  if (headerUserEmail && currentUser) {
+    headerUserEmail.textContent = currentUser.email;
+  }
+
   loginOverlay.style.opacity = '0';
   setTimeout(() => {
     loginOverlay.style.display = 'none';
@@ -169,56 +178,88 @@ function setupLogin() {
       btnSignUp.disabled = false;
       btnSignUp.textContent = 'Criar Conta';
     }
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', async () => {
+        console.log('[Auth] Logout button clicked');
+        // Remove user-specific data from localStorage
+        const storageKey = getStorageKey();
+        if (storageKey) {
+          console.log('[Auth] Removing localStorage key:', storageKey);
+          localStorage.removeItem(storageKey);
+        }
+        // Reset application state to clean slate
+        state = {
+          currentMonth: "05/2026",
+          incomes: [],
+          expenses: [],
+          customIncomeStatuses: [],
+          customExpenseStatuses: []
+        };
+        // Sign out via Supabase; UI will be updated in onAuthStateChange listener
+        await supabase.auth.signOut();
+        console.log('[Auth] Sign out completed, reloading page');
+        // Force a full reload to ensure UI resets cleanly
+        window.location.reload();
+        // showToast("Você saiu da conta.", "info");
+      });
+    }
   });
-  
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      showToast("Você saiu da conta.", "info");
-    });
-  }
 }
 
 async function loadUserDataFromSupabase() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    console.log('[Sync] Nenhum usuário logado. Retornando.');
+    return;
+  }
+
+  console.log('[Sync] Carregando dados para o usuário:', currentUser.email, '(ID:', currentUser.id, ')');
 
   // 1. Tentar carregar os dados locais primeiro para comparação
   let localState = null;
-  const localDataStr = localStorage.getItem(STORAGE_KEY);
+  const storageKey = getStorageKey();
+  const localDataStr = localStorage.getItem(storageKey);
+  console.log('[Sync] Chave local:', storageKey, 'Existe localState:', !!localDataStr);
   if (localDataStr) {
     try {
       localState = JSON.parse(localDataStr);
     } catch (e) {
-      console.error("Erro ao ler dados locais:", e);
+      console.error("[Sync] Erro ao ler dados locais:", e);
     }
   }
 
   // 2. Buscar os dados no Supabase
+  console.log('[Sync] Buscando dados no Supabase...');
   const { data, error } = await supabase
     .from('user_data')
     .select('data')
     .eq('id', currentUser.id)
     .single();
 
+  console.log('[Sync] Resposta do Supabase:', { data: !!data, error });
+
   if (error && error.code !== 'PGRST116') { // PGRST116 é "no rows returned"
-    console.error("Erro ao buscar dados do Supabase:", error);
+    console.error("[Sync] Erro de RLS ou conexão ao buscar do Supabase:", error);
     showToast("Erro de conexão com o banco. Usando dados locais.", "error");
     if (localState) {
+      console.log('[Sync] Fallback: Carregando localState existente.');
       state = localState;
       migrateData();
     } else {
-      loadDefaultData();
+      console.log('[Sync] Fallback: Sem localState. Carregando planilha vazia.');
+      loadDefaultData(false);
     }
     return;
   }
 
   const remoteState = data?.data;
+  console.log('[Sync] Estado remoto obtido:', !!remoteState);
 
   // 3. Regra de sincronização offline-first baseada em timestamps
   if (remoteState && localState) {
     const remoteTime = new Date(remoteState.lastUpdated || 0).getTime();
     const localTime = new Date(localState.lastUpdated || 0).getTime();
+    console.log('[Sync] Comparando timestamps - Local:', localTime, 'Remoto:', remoteTime);
 
     if (localTime > remoteTime) {
       console.log('[Sync] Dados locais mais recentes. Sincronizando com a nuvem...');
@@ -229,29 +270,39 @@ async function loadUserDataFromSupabase() {
       console.log('[Sync] Dados da nuvem mais recentes. Atualizando local...');
       state = remoteState;
       migrateData();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     }
   } else if (remoteState) {
-    console.log('[Sync] Baixando dados da nuvem...');
+    console.log('[Sync] Apenas dados remotos disponíveis. Baixando da nuvem...');
     state = remoteState;
     migrateData();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(storageKey, JSON.stringify(state));
   } else if (localState) {
     console.log('[Sync] Primeiro acesso com dados locais. Enviando para a nuvem...');
     state = localState;
     migrateData();
     await saveToStorage(); // Envia os dados locais existentes para o novo usuário no Supabase
   } else {
-    console.log('[Sync] Primeiro acesso sem dados. Carregando dados de exemplo...');
-    loadDefaultData();
+    console.log('[Sync] Sem dados locais nem remotos. Inicializando planilha vazia...');
+    loadDefaultData(false);
   }
 }
 
-function loadDefaultData() {
-  state = JSON.parse(JSON.stringify(INITIAL_DATA)); // deep copy
-  // Injeta budgetMonth nas transações iniciais
-  state.incomes.forEach(inc => inc.budgetMonth = "05/2026");
-  state.expenses.forEach(exp => exp.budgetMonth = "05/2026");
+function loadDefaultData(useTemplate = false) {
+  if (useTemplate) {
+    state = JSON.parse(JSON.stringify(INITIAL_DATA)); // deep copy
+    // Injeta budgetMonth nas transações iniciais
+    state.incomes.forEach(inc => inc.budgetMonth = "05/2026");
+    state.expenses.forEach(exp => exp.budgetMonth = "05/2026");
+  } else {
+    state = {
+      currentMonth: "05/2026",
+      incomes: [],
+      expenses: [],
+      customIncomeStatuses: [],
+      customExpenseStatuses: []
+    };
+  }
   saveToStorage();
 }
 
@@ -276,18 +327,21 @@ async function saveToStorage() {
   // Atualiza o timestamp de modificação antes de salvar
   state.lastUpdated = new Date().toISOString();
 
-  // Salva localmente como backup ou cache
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const storageKey = getStorageKey();
+  console.log('[Sync] Salvando no localStorage com chave:', storageKey);
+  localStorage.setItem(storageKey, JSON.stringify(state));
   
-  // Salva no Supabase
   if (currentUser) {
+    console.log('[Sync] Tentando salvar no Supabase para o ID:', currentUser.id);
     const { error } = await supabase
       .from('user_data')
       .upsert({ id: currentUser.id, data: state });
       
     if (error) {
-      console.error("Erro ao salvar no Supabase:", error);
+      console.error("[Sync] Erro ao salvar no Supabase:", error);
       showToast("Falha ao salvar na nuvem.", "error");
+    } else {
+      console.log('[Sync] Salvo no Supabase com sucesso!');
     }
   }
 }
@@ -817,10 +871,19 @@ function setupEventListeners() {
 
   document.getElementById('btnResetData').addEventListener('click', () => {
     if (confirm("Tem certeza que deseja redefinir os dados para os originais da planilha? Todas as alterações manuais serão perdidas.")) {
-      loadDefaultData();
+      loadDefaultData(true);
       populateMonthSelector();
       render();
       showToast("Dados redefinidos para o padrão com sucesso!", "info");
+    }
+  });
+
+  document.getElementById('btnClearData').addEventListener('click', () => {
+    if (confirm("Tem certeza que deseja apagar permanentemente todas as suas receitas e despesas? Essa ação não pode ser desfeita.")) {
+      loadDefaultData(false);
+      populateMonthSelector();
+      render();
+      showToast("Todos os dados foram excluídos com sucesso!", "info");
     }
   });
 
@@ -1448,6 +1511,7 @@ function getChartDefaults() {
 function populateAnalyticsSelectors() {
   const startSel = document.getElementById('analyticsRangeStart');
   const endSel = document.getElementById('analyticsRangeEnd');
+  const months = new Set();
 
   state.incomes.forEach(item => {
     if (item.budgetMonth) {

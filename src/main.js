@@ -178,17 +178,35 @@ function setupLogin() {
       btnSignUp.disabled = false;
       btnSignUp.textContent = 'Criar Conta';
     }
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-      btnLogout.addEventListener('click', async () => {
-        console.log('[Auth] Logout button clicked');
-        // Remove user-specific data from localStorage
+  });
+
+  // Attach logout button handler globally
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      console.log('[Auth] Logout button clicked');
+      try {
+        // 1. Clear app data from localStorage
         const storageKey = getStorageKey();
         if (storageKey) {
           console.log('[Auth] Removing localStorage key:', storageKey);
           localStorage.removeItem(storageKey);
         }
-        // Reset application state to clean slate
+
+        // 2. Clear ALL Supabase auth tokens from localStorage
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => {
+          console.log('[Auth] Removing Supabase key:', key);
+          localStorage.removeItem(key);
+        });
+
+        // 3. Reset app state
         state = {
           currentMonth: "05/2026",
           incomes: [],
@@ -196,15 +214,29 @@ function setupLogin() {
           customIncomeStatuses: [],
           customExpenseStatuses: []
         };
-        // Sign out via Supabase; UI will be updated in onAuthStateChange listener
-        await supabase.auth.signOut();
-        console.log('[Auth] Sign out completed, reloading page');
-        // Force a full reload to ensure UI resets cleanly
-        window.location.reload();
-        // showToast("Você saiu da conta.", "info");
-      });
-    }
-  });
+        currentUser = null;
+
+        // 4. Sign out from Supabase (with timeout fallback)
+        try {
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 3000))
+          ]);
+          console.log('[Auth] Supabase signOut completed');
+        } catch (signOutErr) {
+          console.warn('[Auth] Supabase signOut failed or timed out:', signOutErr);
+        }
+      } catch (err) {
+        console.error('[Auth] Error during logout:', err);
+      }
+
+      // 5. ALWAYS reload - this runs no matter what
+      console.log('[Auth] Reloading page...');
+      window.location.reload();
+    });
+  } else {
+    console.warn('[Auth] btnLogout element NOT found in DOM!');
+  }
 }
 
 async function loadUserDataFromSupabase() {

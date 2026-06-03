@@ -208,14 +208,17 @@ select.month-selector:focus {
 }
 
 .metric-card.received::before { background-color: var(--success); }
+.metric-card.pending-receive::before { background-color: var(--warning); }
 .metric-card.to-pay::before { background-color: var(--danger); }
 .metric-card.remaining::before { background-color: var(--primary); }
 
 .metric-card.received { border-color: rgba(16, 185, 129, 0.15); }
+.metric-card.pending-receive { border-color: rgba(245, 158, 11, 0.15); }
 .metric-card.to-pay { border-color: rgba(244, 63, 94, 0.15); }
 .metric-card.remaining { border-color: rgba(99, 102, 241, 0.15); }
 
 .metric-card.received:hover { border-color: rgba(16, 185, 129, 0.3); }
+.metric-card.pending-receive:hover { border-color: rgba(245, 158, 11, 0.3); }
 .metric-card.to-pay:hover { border-color: rgba(244, 63, 94, 0.3); }
 .metric-card.remaining:hover { border-color: rgba(99, 102, 241, 0.3); }
 
@@ -237,6 +240,7 @@ select.month-selector:focus {
 }
 
 .metric-card.received .metric-value { color: var(--success); text-shadow: 0 0 15px rgba(16, 185, 129, 0.1); }
+.metric-card.pending-receive .metric-value { color: var(--warning); text-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
 .metric-card.to-pay .metric-value { color: var(--danger); text-shadow: 0 0 15px rgba(244, 63, 94, 0.1); }
 .metric-card.remaining .metric-value { color: var(--primary); text-shadow: 0 0 15px rgba(99, 102, 241, 0.1); }
 

@@ -461,12 +461,14 @@ function render() {
   document.getElementById('countExpenses').textContent = filteredExpenses.length;
 
   // 2. Calcular Totais
-  const totalReceived = filteredIncomes.reduce((acc, inc) => acc + inc.value, 0);
+  const totalReceived = filteredIncomes.filter(inc => inc.status === 'pago').reduce((acc, inc) => acc + inc.value, 0);
+  const pendingReceive = filteredIncomes.filter(inc => inc.status !== 'pago').reduce((acc, inc) => acc + inc.value, 0);
   const totalToPay = filteredExpenses.reduce((acc, exp) => acc + exp.value, 0);
   const remainingValue = totalReceived - totalToPay;
 
   // 3. Atualizar KPIs do Cabeçalho
   document.getElementById('valTotalReceived').textContent = formatCurrency(totalReceived);
+  document.getElementById('valPendingReceive').textContent = formatCurrency(pendingReceive);
   document.getElementById('valTotalToPay').textContent = formatCurrency(totalToPay);
   document.getElementById('valTotalRemaining').textContent = formatCurrency(remainingValue);
 
@@ -492,7 +494,7 @@ function render() {
   }
 
   // 5. Renderizar Tabela de Receitas
-  renderIncomesTable(filteredIncomes, totalReceived);
+  renderIncomesTable(filteredIncomes, totalReceived, pendingReceive);
 
   // 6. Renderizar Tabela de Despesas (Agrupadas por Categoria)
   renderExpensesTable(filteredExpenses, totalToPay);
@@ -503,7 +505,7 @@ function render() {
 }
 
 // --- TABELA DE RECEITAS ---
-function renderIncomesTable(incomes, total) {
+function renderIncomesTable(incomes, totalReceived, pendingReceive = 0) {
   const tbody = document.getElementById('tbodyIncomes');
   tbody.innerHTML = '';
 
@@ -562,11 +564,24 @@ function renderIncomesTable(incomes, total) {
   summaryTr.className = 'summary-row';
   summaryTr.style.background = 'rgba(16, 185, 129, 0.05)';
   summaryTr.innerHTML = `
-    <td class="text-success text-bold">TOTAL RECEBIDO</td>
-    <td class="font-numeric text-bold text-success" colspan="3">${formatCurrency(total)}</td>
+    <td class="text-success text-bold">TOTAL RECEBIDO (PAGO)</td>
+    <td class="font-numeric text-bold text-success" colspan="3">${formatCurrency(totalReceived)}</td>
     <td></td>
   `;
   tbody.appendChild(summaryTr);
+
+  // Linha de Resumo do Pendente
+  if (pendingReceive > 0) {
+    const pendingTr = document.createElement('tr');
+    pendingTr.className = 'summary-row';
+    pendingTr.style.background = 'rgba(245, 158, 11, 0.05)';
+    pendingTr.innerHTML = `
+      <td class="text-warning text-bold">TOTAL A RECEBER (PENDENTE)</td>
+      <td class="font-numeric text-bold text-warning" colspan="3">${formatCurrency(pendingReceive)}</td>
+      <td></td>
+    `;
+    tbody.appendChild(pendingTr);
+  }
 }
 
 // --- TABELA DE DESPESAS ---
@@ -1634,7 +1649,7 @@ function renderAnalytics() {
   const monthlyData = monthsInRange.map(month => {
     const incomes = state.incomes.filter(i => i.budgetMonth === month);
     const expenses = state.expenses.filter(e => e.budgetMonth === month);
-    const totalIncome = incomes.reduce((sum, i) => sum + i.value, 0);
+    const totalIncome = incomes.filter(i => i.status === 'pago').reduce((sum, i) => sum + i.value, 0);
     const totalExpense = expenses.reduce((sum, e) => sum + e.value, 0);
     return { month, totalIncome, totalExpense, balance: totalIncome - totalExpense, expenses, incomes };
   });

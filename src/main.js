@@ -463,12 +463,17 @@ function render() {
   // 2. Calcular Totais
   const totalReceived = filteredIncomes.filter(inc => inc.status === 'pago').reduce((acc, inc) => acc + inc.value, 0);
   const pendingReceive = filteredIncomes.filter(inc => inc.status !== 'pago').reduce((acc, inc) => acc + inc.value, 0);
-  const totalToPay = filteredExpenses.reduce((acc, exp) => acc + exp.value, 0);
-  const remainingValue = totalReceived - totalToPay;
+  const totalPaidExpenses = filteredExpenses.filter(exp => exp.status === 'pago').reduce((acc, exp) => acc + exp.value, 0);
+  const totalToPay = filteredExpenses.filter(exp => exp.status !== 'pago').reduce((acc, exp) => acc + exp.value, 0);
+
+  const totalIncomesAll = totalReceived + pendingReceive;
+  const totalExpensesAll = totalPaidExpenses + totalToPay;
+  const remainingValue = totalIncomesAll - totalExpensesAll;
 
   // 3. Atualizar KPIs do Cabeçalho
   document.getElementById('valTotalReceived').textContent = formatCurrency(totalReceived);
   document.getElementById('valPendingReceive').textContent = formatCurrency(pendingReceive);
+  document.getElementById('valTotalPaidExpenses').textContent = formatCurrency(totalPaidExpenses);
   document.getElementById('valTotalToPay').textContent = formatCurrency(totalToPay);
   document.getElementById('valTotalRemaining').textContent = formatCurrency(remainingValue);
 
@@ -482,7 +487,7 @@ function render() {
 
   // 4. Barra de progresso (Proporção de comprometimento da receita)
   const progressBarFill = document.getElementById('progressBarFill');
-  const percentUsed = totalReceived > 0 ? (totalToPay / totalReceived) * 100 : 0;
+  const percentUsed = totalIncomesAll > 0 ? (totalExpensesAll / totalIncomesAll) * 100 : 0;
   progressBarFill.style.width = `${Math.min(percentUsed, 100)}%`;
   
   if (percentUsed > 100) {
@@ -497,7 +502,7 @@ function render() {
   renderIncomesTable(filteredIncomes, totalReceived, pendingReceive);
 
   // 6. Renderizar Tabela de Despesas (Agrupadas por Categoria)
-  renderExpensesTable(filteredExpenses, totalToPay);
+  renderExpensesTable(filteredExpenses, totalToPay, totalPaidExpenses);
 
   // 7. Renderizar Widgets / Gráficos de barra
   renderCategoryWidget(filteredExpenses);
@@ -585,7 +590,7 @@ function renderIncomesTable(incomes, totalReceived, pendingReceive = 0) {
 }
 
 // --- TABELA DE DESPESAS ---
-function renderExpensesTable(expenses, total) {
+function renderExpensesTable(expenses, totalToPay, totalPaidExpenses = 0) {
   const tbody = document.getElementById('tbodyExpenses');
   tbody.innerHTML = '';
 
@@ -680,13 +685,26 @@ function renderExpensesTable(expenses, total) {
     });
   });
 
+  // Linha de Resumo Geral Pago
+  if (totalPaidExpenses > 0) {
+    const paidTr = document.createElement('tr');
+    paidTr.className = 'summary-row';
+    paidTr.style.background = 'rgba(14, 165, 233, 0.05)';
+    paidTr.innerHTML = `
+      <td colspan="2" class="text-info text-bold" style="letter-spacing: 0.05em;">TOTAL PAGO</td>
+      <td class="font-numeric text-bold text-info" colspan="4">${formatCurrency(totalPaidExpenses)}</td>
+      <td></td>
+    `;
+    tbody.appendChild(paidTr);
+  }
+
   // Linha de Resumo Geral a Pagar
   const summaryTr = document.createElement('tr');
   summaryTr.className = 'summary-row';
-  summaryTr.style.background = 'rgba(99, 102, 241, 0.05)';
+  summaryTr.style.background = 'rgba(244, 63, 94, 0.05)';
   summaryTr.innerHTML = `
-    <td colspan="2" class="text-primary text-bold" style="letter-spacing: 0.05em;">TOTAL A PAGAR</td>
-    <td class="font-numeric text-bold text-primary" colspan="4">${formatCurrency(total)}</td>
+    <td colspan="2" class="text-danger text-bold" style="letter-spacing: 0.05em;">TOTAL A PAGAR (PENDENTE)</td>
+    <td class="font-numeric text-bold text-danger" colspan="4">${formatCurrency(totalToPay)}</td>
     <td></td>
   `;
   tbody.appendChild(summaryTr);

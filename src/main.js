@@ -817,9 +817,12 @@ function setupEventListeners() {
     document.getElementById('newMonthInput').value = '';
     document.getElementById('monthModal').classList.add('active');
   });
-  document.getElementById('btnMonthModalClose').addEventListener('click', () => {
+  document.getElementById('btnDuplicateMonth').addEventListener('click', () => {
+    duplicateCurrentMonth();
+});
+document.getElementById('btnMonthModalClose').addEventListener('click', () => {
     document.getElementById('monthModal').classList.remove('active');
-  });
+});
   document.getElementById('btnMonthModalCancel').addEventListener('click', () => {
     document.getElementById('monthModal').classList.remove('active');
   });
@@ -1276,6 +1279,67 @@ function parseSheetNameToBudgetMonth(sheetName) {
   }
 
   return `${month}/${year}`;
+
+// --- DUPLICAR MÊS FUNÇÃO ---
+function duplicateMonthData(sourceMonth, targetMonth) {
+  if (!sourceMonth || !targetMonth) {
+    showToast('Meses inválidos para duplicação.', 'error');
+    return;
+  }
+  // Duplicar receitas
+  const sourceIncomes = state.incomes.filter(i => i.budgetMonth === sourceMonth);
+  const duplicatedIncomes = sourceIncomes.map(i => ({
+    ...i,
+    id: `inc-dup-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+    budgetMonth: targetMonth
+  }));
+  // Duplicar despesas
+  const sourceExpenses = state.expenses.filter(e => e.budgetMonth === sourceMonth);
+  const duplicatedExpenses = sourceExpenses.map(e => ({
+    ...e,
+    id: `exp-dup-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+    budgetMonth: targetMonth
+  }));
+  // Inserir nos arrays de estado
+  state.incomes.push(...duplicatedIncomes);
+  state.expenses.push(...duplicatedExpenses);
+  // Atualizar UI e persistência
+  saveToStorage();
+  populateMonthSelector();
+  render();
+  showToast(`Dados de ${sourceMonth} duplicados para ${targetMonth}.`, 'success');
+}
+
+function getNextMonth(monthYear) {
+  const [mm, yy] = monthYear.split('/').map(Number);
+  let nextMonth = mm + 1;
+  let nextYear = yy;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+  return `${String(nextMonth).padStart(2, '0')}/${nextYear}`;
+}
+
+function duplicateCurrentMonth() {
+  console.log('Duplicate button clicked', state.currentMonth);
+  if (!state.currentMonth) {
+    showToast('Selecione um mês antes de duplicar.', 'error');
+    return;
+  }
+  const sourceMonth = state.currentMonth;
+  const targetMonth = getNextMonth(sourceMonth);
+  // Duplicar os dados
+  duplicateMonthData(sourceMonth, targetMonth);
+  // Mudar para o novo mês
+  state.currentMonth = targetMonth;
+  saveToStorage();
+  populateMonthSelector();
+  // Ensure selector reflects new month
+  const monthSel = document.getElementById('monthSelector');
+  if (monthSel) monthSel.value = targetMonth;
+  render();
+}
 }
 
 function importSpreadsheetData(e) {

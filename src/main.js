@@ -186,14 +186,13 @@ function setupLogin() {
     btnLogout.addEventListener('click', async () => {
       console.log('[Auth] Logout button clicked');
       try {
-        // 1. Clear app data from localStorage
-        const storageKey = getStorageKey();
-        if (storageKey) {
-          console.log('[Auth] Removing localStorage key:', storageKey);
-          localStorage.removeItem(storageKey);
+        // Ensure any pending local changes are persisted to Supabase
+        if (currentUser) {
+          console.log('[Auth] Saving pending data before logout');
+          await saveToStorage();
         }
 
-        // 2. Clear ALL Supabase auth tokens from localStorage
+        // Clear Supabase auth tokens from localStorage (but keep app data)
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -206,7 +205,7 @@ function setupLogin() {
           localStorage.removeItem(key);
         });
 
-        // 3. Reset app state
+        // Reset app state (optional: keep state until reload)
         state = {
           currentMonth: "05/2026",
           incomes: [],
@@ -216,7 +215,7 @@ function setupLogin() {
         };
         currentUser = null;
 
-        // 4. Sign out from Supabase (with timeout fallback)
+        // Sign out from Supabase (with timeout fallback)
         try {
           await Promise.race([
             supabase.auth.signOut(),
@@ -230,7 +229,7 @@ function setupLogin() {
         console.error('[Auth] Error during logout:', err);
       }
 
-      // 5. ALWAYS reload - this runs no matter what
+      // ALWAYS reload the page
       console.log('[Auth] Reloading page...');
       window.location.reload();
     });
@@ -1104,7 +1103,7 @@ function handleFormSubmit(e) {
       date: date,
       status: status,
       obs: obs,
-      budgetMonth: id ? state.incomes.find(x => x.id === id).budgetMonth : state.currentMonth // Mantém o mês do dashboard atual se for novo, ou preserva o do edit
+      budgetMonth: id ? state.incomes.find(x => x.id === id).budgetMonth : computedBudgetMonth // Use computed month for new income entries
     };
 
     if (id) {
@@ -1126,7 +1125,7 @@ function handleFormSubmit(e) {
       date: date,
       status: status,
       obs: obs,
-      budgetMonth: id ? state.expenses.find(x => x.id === id).budgetMonth : state.currentMonth
+      budgetMonth: id ? state.expenses.find(x => x.id === id).budgetMonth : computedBudgetMonth // Use computed month for new expense entries
     };
 
     if (id) {

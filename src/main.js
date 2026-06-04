@@ -819,7 +819,41 @@ function setupEventListeners() {
   });
   document.getElementById('btnDuplicateMonth').addEventListener('click', () => {
     duplicateCurrentMonth();
-});
+  });
+
+  document.getElementById('btnDeleteMonth').addEventListener('click', () => {
+    const monthToDelete = state.currentMonth;
+    if (!monthToDelete) {
+      showToast('Nenhum mês selecionado.', 'error');
+      return;
+    }
+    const monthLabel = formatMonthName(monthToDelete);
+    if (!confirm(`Tem certeza que deseja excluir TODOS os lançamentos de "${monthLabel}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+    // Remove receitas e despesas do mês
+    state.incomes = state.incomes.filter(i => i.budgetMonth !== monthToDelete);
+    state.expenses = state.expenses.filter(e => e.budgetMonth !== monthToDelete);
+
+    // Navega para outro mês disponível
+    const remaining = new Set([
+      ...state.incomes.map(i => i.budgetMonth),
+      ...state.expenses.map(e => e.budgetMonth)
+    ]);
+    const sorted = Array.from(remaining).sort((a, b) => {
+      const [mA, yA] = a.split('/').map(Number);
+      const [mB, yB] = b.split('/').map(Number);
+      return yA !== yB ? yA - yB : mA - mB;
+    });
+
+    state.currentMonth = sorted.length > 0 ? sorted[sorted.length - 1] : '05/2026';
+
+    saveToStorage();
+    populateMonthSelector();
+    const sel = document.getElementById('monthSelector');
+    if (sel) sel.value = state.currentMonth;
+    render();
+    showToast(`Mês "${monthLabel}" excluído com sucesso!`, 'info');
+  });
 document.getElementById('btnMonthModalClose').addEventListener('click', () => {
     document.getElementById('monthModal').classList.remove('active');
 });
@@ -1279,6 +1313,7 @@ function parseSheetNameToBudgetMonth(sheetName) {
   }
 
   return `${month}/${year}`;
+}
 
 // --- DUPLICAR MÊS FUNÇÃO ---
 function duplicateMonthData(sourceMonth, targetMonth) {
@@ -1339,7 +1374,6 @@ function duplicateCurrentMonth() {
   const monthSel = document.getElementById('monthSelector');
   if (monthSel) monthSel.value = targetMonth;
   render();
-}
 }
 
 function importSpreadsheetData(e) {

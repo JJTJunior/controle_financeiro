@@ -622,6 +622,48 @@ tr.table-row-hover:hover {
   gap: 0.75rem;
 }
 
+/* Collapsible Widget */
+.widget-title.collapsible-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), border-color var(--transition-smooth), margin var(--transition-smooth);
+}
+
+.widget-title.collapsible-trigger:hover {
+  color: var(--primary);
+}
+
+.widget-title.collapsible-trigger .chevron-icon {
+  margin-left: auto;
+  transition: transform var(--transition-smooth);
+}
+
+.widget-title.collapsible-trigger.collapsed .chevron-icon {
+  transform: rotate(-90deg);
+}
+
+.widget-title.collapsible-trigger.collapsed {
+  margin-bottom: 0;
+  border-bottom-color: transparent;
+}
+
+.action-box.collapsible-content {
+  max-height: 500px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height var(--transition-smooth), opacity var(--transition-smooth), margin var(--transition-smooth);
+}
+
+.action-box.collapsible-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
 /* MODAL STYLING */
 .modal-overlay {
   position: fixed;

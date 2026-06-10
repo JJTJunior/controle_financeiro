@@ -1005,6 +1005,16 @@ document.getElementById('btnMonthModalClose').addEventListener('click', () => {
 
   // --- ANALYTICS ---
   document.getElementById('btnApplyAnalytics').addEventListener('click', () => renderAnalytics());
+
+  // Toggle Gerenciamento de Dados collapsible widget
+  const dbHeader = document.getElementById('dataManagementHeader');
+  const dbContent = document.getElementById('dataManagementContent');
+  if (dbHeader && dbContent) {
+    dbHeader.addEventListener('click', () => {
+      const isCollapsed = dbHeader.classList.toggle('collapsed');
+      dbContent.classList.toggle('collapsed', isCollapsed);
+    });
+  }
 }
 
 // --- CONTROLE DA MODAL ---

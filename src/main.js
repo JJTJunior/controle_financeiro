@@ -22,6 +22,7 @@ let currentUser = null;
 async function init() {
   try {
     console.log('[Init] Iniciando app...');
+  applyStoredTheme();
     console.log('[Init] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
     console.log('[Init] Supabase Key (primeiros 20 chars):', import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 20) + '...');
     
@@ -82,6 +83,7 @@ function showApp() {
     render();
     renderAnalytics();
   }, 500);
+    applyStoredTheme();
 }
 
 function showLogin() {
@@ -352,6 +354,26 @@ function migrateData() {
     }
   });
   if (updated) saveToStorage();
+}
+// --- THEME TOGGLE ---
+function toggleTheme() {
+  const root = document.documentElement;
+  const isLight = root.classList.toggle('light-theme');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+}
+
+function applyStoredTheme() {
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  if (isLight) {
+    document.documentElement.classList.add('light-theme');
+  } else {
+    document.documentElement.classList.remove('light-theme');
+  }
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isLight ? '☀️' : '🌙';
 }
 
 async function saveToStorage() {
@@ -854,8 +876,11 @@ function setupEventListeners() {
     showToast(`Mês "${monthLabel}" excluído com sucesso!`, 'info');
   });
 document.getElementById('btnMonthModalClose').addEventListener('click', () => {
-    document.getElementById('monthModal').classList.remove('active');
-});
+      document.getElementById('monthModal').classList.remove('active');
+    });
+    // Theme toggle button listener
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
   document.getElementById('btnMonthModalCancel').addEventListener('click', () => {
     document.getElementById('monthModal').classList.remove('active');
   });
@@ -1958,8 +1983,8 @@ function renderChartCategoryDoughnut(expenses) {
       datasets: [{
         data,
         backgroundColor: CHART_COLORS.slice(0, data.length),
-        borderColor: '#060813',
-        borderWidth: 2,
+        borderColor: 'transparent',
+        borderWidth: 1,
         hoverOffset: 8,
       }]
     },
